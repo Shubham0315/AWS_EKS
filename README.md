@@ -48,6 +48,15 @@ _**e.g:- If we're using nginx app. There will be nginx ingress controller which 
 - DevOps engineer along with pod and service will create ingress for every resource or pod which need access from external world. There will be one ingress controller which will watch for all ingress resources and it will configure LB. External person will talk to LB and from LB which is in public subnet request will go service through pod.
 
 
+# Practical Demo
+
+- Before creating EKS, we've to install something on laptop like kubectl, eksctl and AWS CLI. Kubectl is used to interact with K8S cluster created on EKS and eksctl is a command line utility to create EKS Cluster.
+- To create Cluster :-     _**eksctl create cluster --name demo-cluster --region us-east-1 --fargate**_
+
+![image](https://github.com/Shubham0315/AWS_EKS/assets/105341138/c26d32bd-6b6e-46ca-856c-6aefd64ae8b0)
+
+
+
 
 
 
