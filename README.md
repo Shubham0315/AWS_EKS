@@ -84,14 +84,111 @@ Fargate profiles:-
 
 - In logging section, if we want to log all API server requests, we can do --> _**manage logging --> enable required --> save**_
 
-- 
+- Now we want to download kube-config file from CLI of kubectl
+  
+  Command :- _**aws eks update-kubeconfig --name demo-cluster --region us-east-1**_
+- Now we can deploy actual application
 
+  Command :-  _**eksctl create fargateprofile --cluster demo-cluster --region us-east-1 --name alb-sample-app --namespace game-2048**
 
+- Here we're creating fargate profile because here we're attaching namespace "game-2048". The above command creates fargate profile. Now if we go to compute section, our fargate profile is visible with attached namespace. Now we can create instances in both default and new namespace. If we want to deploy on any namespaces on fargate, we've to do the same process
 
+![image](https://github.com/Shubham0315/AWS_EKS/assets/105341138/3f607cbc-cda3-4bf9-a208-4f5c740488a3)
 
+![image](https://github.com/Shubham0315/AWS_EKS/assets/105341138/aa1fcdc4-8638-45eb-9598-5eb9da717ee6)
 
+![image](https://github.com/Shubham0315/AWS_EKS/assets/105341138/9bf3e7ba-436c-40f7-a10c-a10f9a79e5a3)
 
+- Now to deploy our app on any namespace created on fargate.   This command contains all configuration for deployment, service and ingress
 
+  Command :-  _**kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/v2.5.4/docs/examples/2048/2048_full.yaml**_
 
+  ![image](https://github.com/Shubham0315/AWS_EKS/assets/105341138/d15ae27e-7e51-4064-a75e-833e1c36bbde)
 
+- We can also check contents of this file on google :- **https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/v2.5.4/docs/examples/2048/2048_full.yaml**
+
+- This file when opened we can see it creates namespace. As we can see in deployment section, we've to mention pod specification like container image, replicas. Also we can see service, here we need to ensure target port is container port of your pod and ensure there are proper labels and selectors. Selector/labels here should match with that of deployment
+- So this way of labels and selectors, our service will be able to discover pods. Also we have ingress in the file using which we're routing traffic inside cluster. We inside ingress define couple of annotations. With ingress, if someone is trying to access LB, we use ALB which reads ingress resource and when it find matching rules, it will forward request to service called 2048. So inside ingress we define service where request is forwarded and service forwards request to deployment/pod which is in the namespace configured. After applying command, every resource is created on EKS cluster.
+
+- As of now using above yml we only created pod, deployment, service and ingress. Not created any ingress controller. There is nothing on our cluster which understand the resources created. So without ingress controllers our resources are useless
+
+- To see pods and services
+
+  Command :- **kubectl get pods -n game-2048**  (-n means in which namespace we want to list resources)
+             **kubectl get svc -n game-2048**
+
+![image](https://github.com/Shubham0315/AWS_EKS/assets/105341138/8fc41c4a-9b91-41ef-91c8-32a7ed74341b)
+
+![image](https://github.com/Shubham0315/AWS_EKS/assets/105341138/b7b750ee-7b62-43b9-a3e8-18692e0c4c47)
+
+- If we see service has cluster IP, type is node port but no external IP. So anybody with AWS VPC or anyone who has access to VPC they can talk to pod using node IP address followed by port. But user should access it, so we created ingress.
+
+  To list ingress :-   **kubectl get ingress -n game-2048**
+
+- Ingress is created but no address is there. Address is we've to access the app from outside world. Address is not created as there is no LB and ingress controller.
+
+- Now create ingress controller which will read ingress resource called ingress-2048 which will create Load balancer for us with all configurations like target groups, ports, etc. All is taken care by ingress controller all we need is ingress resource. To deploy ALB controller, we've to create IAM OIDS provider or connector as ALB controller has to access application LB. ALB controller is K8S pod but it needs to talk to AWS resources for which it needs to have IAM integrated. So we need to create IAM OIDC provider.
+
+Command :-   _**eksctl utils associate-iam-oidc-provider --cluster demo-cluster --region us-east-1 --approve**_
+
+![image](https://github.com/Shubham0315/AWS_EKS/assets/105341138/c1c20d12-5a06-4892-93e9-10c17efd0132)
+
+- Now we're trying to install ALB controller which is a pod for which we've to grant it access to services like ALB. This is because ALB ingress controller should create ALB for us for which it has to talk to AWS APIs. So here create IAM role for that.
+
+Command :-  _**curl -O https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/v2.5.4/docs/install/iam_policy.json**_
+
+![image](https://github.com/Shubham0315/AWS_EKS/assets/105341138/dd67672e-d24e-48e7-808c-ad2fbd677249)
+
+- Then create IAM policy using below
+
+Command :- _**aws iam create-policy --policy-name AWSLoadBalancerControllerIAMPolicy --policy-document file://iam_policy.json**_
+
+![image](https://github.com/Shubham0315/AWS_EKS/assets/105341138/8d9acb4a-295e-4d15-b71e-c9bb693e1bc6)
+
+- Then to create role use below
+
+Command :- _**eksctl create iamserviceaccount --cluster=demo-cluster --region us-east-1 --namespace=kube-system --name=aws-load-balancer-controller --role-name AmazonEKSLoadBalancerControllerRole --attach-policy-arn=arn:aws:iam::975049937461:policy/AWSLoadBalancerControllerIAMPolicy --approve**_
+
+![image](https://github.com/Shubham0315/AWS_EKS/assets/105341138/2e91f43e-8c15-4358-acda-c4eca770060a)
+
+- Using above command we are attaching role to service account of our pod. Whenever pod is running, it has service account and service account needs role attached to integrate it with other AWS resources. We can use same service account in our application
+
+- Now to create ALB controller for which we will use helm charts which creates actual controller and it will use service account for running pod.
+
+- Now install the helm chart
+
+  Command1 :- helm repo add eks https://aws.github.io/eks-charts  ( to add eks to our repositories)
+  Command2 :- helm repo update eks  ( to check for updates)
+
+  ![image](https://github.com/Shubham0315/AWS_EKS/assets/105341138/6169eade-6a16-477c-8bd1-d147005bf870)
+
+- Now use below to install helm charts. Install AWS LB Controller (ALB Controller)
+
+  Command :- _**helm install aws-load-balancer-controller eks/aws-load-balancer-controller -n kube-system --set clusterName=demo-cluster --set serviceAccount.create=false --set serviceAccount.name=aws-load-balancer-controller --set region=us-east-1 --set vpcId=vpc-0c19787adc3708b9b**_
+
+  ![image](https://github.com/Shubham0315/AWS_EKS/assets/105341138/f7ab4634-fd33-4c22-8781-18c92411a3b5)
+
+- Now we've to verify if the ALB is created and there are at least 2 replicas of it
+
+  Command :-   _**kubectl get deployment -n kube-system aws-load-balancer-controller**_
+  
+  ALB will create 2 replicas one one each in both availability zones. It will continuously watch for ingress resources and will create ALB resources in 2 zones
+
+  ![image](https://github.com/Shubham0315/AWS_EKS/assets/105341138/518e2198-d098-49d0-8fec-247411f9b8cf)
+
+- Now lets see if this AWS LB controller has created ALB or not. Go to EC2 and then go to Load balancer. LB is created by BL controller as we submitted an ingress resource  (kubectl get ingress -n game-2048). Running the command gives us address of ingress. This address is the LB that ingress controller has created watching the ingress resource. 
+
+![image](https://github.com/Shubham0315/AWS_EKS/assets/105341138/a502e8c9-6274-4596-a3da-e4933aba68d5)
+
+- We can go to LB now. Inside LB we can check the IP address (DNS name) will be same as the IP address we got running above command
+
+![image](https://github.com/Shubham0315/AWS_EKS/assets/105341138/0e924225-b782-4e8f-93c8-2ca98a0e0f71)
+
+![image](https://github.com/Shubham0315/AWS_EKS/assets/105341138/8a67c5f7-09e0-458f-9499-adc37991b8e0)
+
+# Application Interface for Users
+
+- Now we've to wait till the LB state is active. Copy the URL (IP address of LB) and paste in browser to check if our application is accessible for end users.
+
+![image](https://github.com/Shubham0315/AWS_EKS/assets/105341138/5fb1876d-3e36-4e68-941c-96c2ce547d2e)
 
