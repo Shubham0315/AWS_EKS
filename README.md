@@ -58,27 +58,34 @@ _**e.g:- If we're using nginx app. There will be nginx ingress controller which 
 
 # Practical Demo
 
-- Before creating EKS, we've to install something on laptop like kubectl, eksctl and AWS CLI. Kubectl is used to interact with K8S cluster created on EKS and eksctl is a command line utility to create EKS Cluster.
-- To create Cluster :-     _**eksctl create cluster --name demo-cluster --region us-east-1 --fargate**_
+- Before creating EKS, we've to install below on laptop - kubectl, eksctl and AWS CLI to interact with EKS cluster. Kubectl is used to interact with K8S cluster created on EKS and eksctl is a command line utility to create EKS Cluster.
+- Also download AWS CLI and configure it.
+- For demo, use root account.
+- To create Cluster, we can do from UI or CLI. In organizations we can use eksctl CLI to create EKS cluster
+  - Choose fargate if our organization doesnt have specific requirements as worker node to be on RHEL only or any other, it need to have speceific things. Now use fargate
+  - Command :-  **eksctl create cluster --name demo-cluster --region us-east-1 --fargate**
 
 ![image](https://github.com/Shubham0315/AWS_EKS/assets/105341138/c26d32bd-6b6e-46ca-856c-6aefd64ae8b0)
 
-- Here eksctl is creating everything for us like service rules, networking (public private subnets). Within VPC it creates private and public subnets and in private subnet we will place our apps. To run this command and create cluster it takes 10-15 mins.
-- If now we see in AWS Console, in our region, cluster will get created.
+- Here eksctl is creating everything for us which is there in UI like service roles, networking (public or private subnets). Here eksctl creates a public-private subnet for us. Within VPC it creates private and public subnets and in private subnet we will place our apps. To run this command and create cluster it takes 10-15 mins. Control plane will be ready once cluster is created
+- If now we see in AWS Console, in our region, cluster will get created. It will have K8S version as well.
 
 ![image](https://github.com/Shubham0315/AWS_EKS/assets/105341138/e1510a2b-7938-4b95-93dc-b2fb6a3ee527)
 
-- Go inside cluster and in resources tab we'll get all resources available on our cluster. This is an added advantage of using EKS as all the default resources and configurations are automatically created on our cluster, we dont have to mention explicitly. These kind of features are available on most of the K8S distributions but with the plane k8s unless we install dashboard by ourself, we dont get all these features.
+- Go inside cluster and in resources tab we'll get all resources available on our cluster. We dont need to go to CLI and type "kubectl get pods" to list pods on cluster.
+- We can check pods in different namespaces by choosing them.
+- This is an added advantage of using EKS as all the default resources and configurations are automatically created on our cluster, we dont have to mention explicitly. These kind of features are available on most of the K8S distributions but with the plane k8s unless we install dashboard by ourself, we dont get all these features.
 
 ![image](https://github.com/Shubham0315/AWS_EKS/assets/105341138/96e9aea0-4ac1-4fa7-a9df-0d21712e6101)
 
 
 - In overview section, we see _**"API Server Endpoint"**_ and _**"OpenID Connector provider URL"**_.
-- With this k8s cluster we've created we can integrate any identity provider. Identity provider means where we create all users for our organization. We can create users here. AWS allows us to attach any identity providers like IAM.
+- With this k8s cluster we've created we can integrate any identity provider. Identity provider means where we create all users for our organization like LDAP. We can create users here. AWS allows us to attach any identity providers like IAM.
 
-e.g:-   If we created pod who wants to talk to S3, if we dont integrate IAM identity provider, how we'll give access to this pod. When any AWS service wants to talk to other service, we need IAM role. Similarly if we create K8S pod, we can attach IAM role with that K8S service account so we can talk to any other AWS services.
+e.g:-   If we created pod who wants to talk to S3, if we dont integrate IAM identity provider, how we'll give access to this pod (role). When any AWS service wants to talk to other service, we need IAM role. Similarly if we create K8S pod, we can attach IAM role with that K8S service account so we can talk to any other AWS services.
 
-- In Compute section, we can see fargate (EC2 not applied here as per requirement). If we create EC2 then we've to attach node groups to them, not applied here. In the end, there is fargate profile. By default now fargate profile is attached to K8S namespace, which means we can deploy pods only to these namespaces. If we've to deploy pod to any other namespace, we've to add other fargate profile.
+- In Compute section, we can see fargate (EC2 not applied here as per requirement). If we create EC2 then we've to attach node groups to them, not applied here.
+- In the end, there is fargate profile. By default now fargate profile is attached to default and kubesystem namespace, which means we can deploy pods only to these namespaces. If we've to deploy pod to any other namespace, we've to add other fargate profile.
 
 Compute Section:-
 
