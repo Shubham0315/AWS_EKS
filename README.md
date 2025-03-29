@@ -196,29 +196,34 @@ Command :- _**aws iam create-policy --policy-name AWSLoadBalancerControllerIAMPo
   ![image](https://github.com/Shubham0315/AWS_EKS/assets/105341138/6169eade-6a16-477c-8bd1-d147005bf870)
 
 - Now use below to install helm charts. Install AWS LB Controller (ALB Controller)
-
-  Command :- _**helm install aws-load-balancer-controller eks/aws-load-balancer-controller -n kube-system --set clusterName=demo-cluster --set serviceAccount.create=false --set serviceAccount.name=aws-load-balancer-controller --set region=us-east-1 --set vpcId=vpc-0c19787adc3708b9b**_
+  - Take VPC name from cluster - Networking tab
+  - Command :- _**helm install aws-load-balancer-controller eks/aws-load-balancer-controller -n kube-system --set clusterName=demo-cluster --set serviceAccount.create=false --set serviceAccount.name=aws-load-balancer-controller --set region=us-east-1 --set vpcId=vpc-0c19787adc3708b9b**_
 
   ![image](https://github.com/Shubham0315/AWS_EKS/assets/105341138/f7ab4634-fd33-4c22-8781-18c92411a3b5)
 
 - Now we've to verify if the ALB is created and there are at least 2 replicas of it
-
-  Command :-   _**kubectl get deployment -n kube-system aws-load-balancer-controller**_
-  
-  ALB will create 2 replicas one one each in both availability zones. It will continuously watch for ingress resources and will create ALB resources in 2 zones
+  - Command :-   _**kubectl get deployment -n kube-system aws-load-balancer-controller**_
+  - ALB will create 2 replicas one one each in both availability zones. It will continuously watch for ingress resources and will create ALB resources in 2 availability zones.
 
   ![image](https://github.com/Shubham0315/AWS_EKS/assets/105341138/518e2198-d098-49d0-8fec-247411f9b8cf)
 
-- Now lets see if this AWS LB controller has created ALB or not. Go to EC2 and then go to Load balancer. LB is created by BL controller as we submitted an ingress resource  (kubectl get ingress -n game-2048). Running the command gives us address of ingress. This address is the LB that ingress controller has created watching the ingress resource. 
+- Now lets see if this AWS LB controller has created ALB or not. Go to EC2 and then go to Load balancer. LB is created by LB controller as we submitted an ingress resource  (kubectl get ingress -n game-2048). Running the command gives us address of ingress. This address is the LB that ingress controller has created watching the ingress resource. 
 
 ![image](https://github.com/Shubham0315/AWS_EKS/assets/105341138/a502e8c9-6274-4596-a3da-e4933aba68d5)
 
+- Ingress controller will watch for the ingress resource, configuration provided in ingress resource and create LB.
 - We can go to LB now. Inside LB we can check the IP address (DNS name) will be same as the IP address we got running above command
+  - Command :- **kubectl get ingress -n game-2048**
+  - This means ingress controller has read ingress resource and created this LB.
+  - As soon as the LB state is active (get from UI).
+  - Ports of application, security groups, etc are configured by ingress resource itself.
 
 ![image](https://github.com/Shubham0315/AWS_EKS/assets/105341138/0e924225-b782-4e8f-93c8-2ca98a0e0f71)
 
 ![image](https://github.com/Shubham0315/AWS_EKS/assets/105341138/8a67c5f7-09e0-458f-9499-adc37991b8e0)
 
+-----------------------------------------------------------------------------------------------------
+  
 # Application Interface for Users
 
 - Now we've to wait till the LB state is active. Copy the URL (IP address of LB) and paste in browser to check if our application is accessible for end users.
