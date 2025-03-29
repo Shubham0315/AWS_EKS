@@ -230,3 +230,9 @@ Command :- _**aws iam create-policy --policy-name AWSLoadBalancerControllerIAMPo
 
 ![image](https://github.com/Shubham0315/AWS_EKS/assets/105341138/5fb1876d-3e36-4e68-941c-96c2ce547d2e)
 
+-----------------------------------------------------------------------------------------------------
+
+- For each microservice, devops engineer has to write pod, deployment, service, ingress yml files. And one time responsibility is to create ingress controller
+- Rest is taken care by ingress controller.
+- On EKS cluster the configuration of ingress controlleris tricky as We first have to create service account and have to attach it with IAM profile/role.
+
