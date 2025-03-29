@@ -27,3 +27,5 @@ Three Tier Architecture Model
     - If we add one more category to catalogue section and application is written in monolithic, any changes made might impact other components as well. QA will have to validate all components for single chnange.
     - In microservices, each component will have individual APIs, can be independently deployed. So QA will use specific APIs to test without worrying about rest components.
 
+  - Here for each microservice, we can write code in single repository creating folder for each MS or create different repos for each.
+  - All the MS can be written in single or different languages depdending on developer or business requirements.
