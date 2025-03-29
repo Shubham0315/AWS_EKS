@@ -13,4 +13,17 @@ Three Tier Architecture Model
 - User Flow
   - For user accessing any app, he need to login or register
   - Once logged in, user will see catalogue details like AI products or robots
+  - After clicking on product, he will see rating for it.
+  - Then if he likes product, he can add to cart
+  - After which he can proceed for payment
+  - Then he can add shipping details
+  - At last order will get completed
+ 
+  Login/register - Catalogue - Rating - Cart - Payment - Shipping - Ordder complete
+
+  - Here for each step we need logic to be written. This can be done using single application binary which is monolithic or using separate code for each application which is microservices to make all the components individually deployable.
+ 
+  - Here we'll use microservice architecture.
+    - If we add one more category to catalogue section and application is written in monolithic, any changes made might impact other components as well. QA will have to validate all components for single chnange.
+    - In microservices, each component will have individual APIs, can be independently deployed. So QA will use specific APIs to test without worrying about rest components.
 
