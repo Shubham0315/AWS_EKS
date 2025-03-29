@@ -97,16 +97,19 @@ Fargate profiles:-
 
 - In authentication section, we can add any identity providers
 
-- In logging section, if we want to log all API server requests, we can do --> _**manage logging --> enable required --> save**_
+- In logging section, if we want to log all API server requests, we can do --> _**manage logging --> enable API server or any other logging as required --> save**_
+
+![image](https://github.com/user-attachments/assets/32c08318-6070-4efe-aabc-39cd04676d6e)
 
 - Now we want to download kube-config file from CLI of kubectl
-  
-  Command :- _**aws eks update-kubeconfig --name demo-cluster --region us-east-1**_
-- Now we can deploy actual application
+  - Command :- _**aws eks update-kubeconfig --name demo-cluster --region us-east-1**_
 
-  Command :-  _**eksctl create fargateprofile --cluster demo-cluster --region us-east-1 --name alb-sample-app --namespace game-2048**
-
-- Here we're creating fargate profile because here we're attaching namespace "game-2048". The above command creates fargate profile. Now if we go to compute section, our fargate profile is visible with attached namespace. Now we can create instances in both default and new namespace. If we want to deploy on any namespaces on fargate, we've to do the same process
+- Now we can deploy actual application. First deploy the pod
+  - For this we need to create fargate profile
+  - Command :-  _**eksctl create fargateprofile --cluster demo-cluster --region us-east-1 --name alb-sample-app --namespace game-2048**
+  - Fargate prfile is created as we're creating it in new namespace, not default one
+  - Here we're creating fargate profile because here we're attaching namespace "game-2048". The above command creates fargate profile.
+  - Now if we go to compute section, our fargate profile is visible with attached namespace. Now we can create instances in both default and new namespace created. If we want to deploy on any namespaces on fargate, we've to do the same process
 
 ![image](https://github.com/Shubham0315/AWS_EKS/assets/105341138/3f607cbc-cda3-4bf9-a208-4f5c740488a3)
 
@@ -114,18 +117,21 @@ Fargate profiles:-
 
 ![image](https://github.com/Shubham0315/AWS_EKS/assets/105341138/9bf3e7ba-436c-40f7-a10c-a10f9a79e5a3)
 
-- Now to deploy our app on any namespace created on fargate.   This command contains all configuration for deployment, service and ingress
+- Now to deploy our app on any namespace created on fargate. This command contains all configuration for deployment, service and ingress
+  - Command :-  _**kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/v2.5.4/docs/examples/2048/2048_full.yaml**_
+  - We can also see contents of the file. In the file its creating namespace, deployment, service used for app. In service we've to take care of target port is same as container port, also need to ensure proper labels and selectors are used in service and deployment. So service can discover the pods. Then in ingress, we've to route traffic to our cluster.
+  - We inside ingress define couple of annotations so if someone tries to access our LB, ingressclass name will read ingress resource and when it finds the matching rules it will forward request to service named 2048
+ 
+  - So request flow will be from Ingress - Service - Deployment - Pods in Namepsace defined.
+  - So inside ingress we define service where request is forwarded and service forwards request to deployment/pod which is in the namespace configured.
+  - Once above command is run, deployment, namespace, service and ingress will get created
 
-  Command :-  _**kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/v2.5.4/docs/examples/2048/2048_full.yaml**_
+  ![image](https://github.com/user-attachments/assets/8d1d8106-8076-4f4f-a0b6-eec65cd6e2f6)
 
   ![image](https://github.com/Shubham0315/AWS_EKS/assets/105341138/d15ae27e-7e51-4064-a75e-833e1c36bbde)
 
-- We can also check contents of this file on google :- **https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/v2.5.4/docs/examples/2048/2048_full.yaml**
-
-- This file when opened we can see it creates namespace. As we can see in deployment section, we've to mention pod specification like container image, replicas. Also we can see service, here we need to ensure target port is container port of your pod and ensure there are proper labels and selectors. Selector/labels here should match with that of deployment
-- So this way of labels and selectors, our service will be able to discover pods. Also we have ingress in the file using which we're routing traffic inside cluster. We inside ingress define couple of annotations. With ingress, if someone is trying to access LB, we use ALB which reads ingress resource and when it find matching rules, it will forward request to service called 2048. So inside ingress we define service where request is forwarded and service forwards request to deployment/pod which is in the namespace configured. After applying command, every resource is created on EKS cluster.
-
-- As of now using above yml we only created pod, deployment, service and ingress. Not created any ingress controller. There is nothing on our cluster which understand the resources created. So without ingress controllers our resources are useless
+- As of now using above yml we only created pod, deployment, service and ingress.
+- We've not created any ingress controller. There is nothing on our cluster which understand the resources created. So without ingress controllers our resources are useless.
 
 - To see pods and services
 
@@ -136,19 +142,27 @@ Fargate profiles:-
 
 ![image](https://github.com/Shubham0315/AWS_EKS/assets/105341138/b7b750ee-7b62-43b9-a3e8-18692e0c4c47)
 
-- If we see service has cluster IP, type is node port but no external IP. So anybody with AWS VPC or anyone who has access to VPC they can talk to pod using node IP address followed by port. But user should access it, so we created ingress.
+- If we see service has cluster IP, type is node port but no external IP. So anybody within AWS VPC or anyone who has access to VPC they can talk to pod using node IP address followed by port. But user should access it, so we created ingress.
+  - To list ingress :-   **kubectl get ingress -n game-2048**
 
-  To list ingress :-   **kubectl get ingress -n game-2048**
+- Ingress is created but no address is there. Address is required as we've to access the app from outside world. Address is not created as there is no LB or ingress controller.
 
-- Ingress is created but no address is there. Address is we've to access the app from outside world. Address is not created as there is no LB and ingress controller.
+![image](https://github.com/user-attachments/assets/73f9b1d9-eeba-4c71-b68c-6522bfe0a248)
 
-- Now create ingress controller which will read ingress resource called ingress-2048 which will create Load balancer for us with all configurations like target groups, ports, etc. All is taken care by ingress controller all we need is ingress resource. To deploy ALB controller, we've to create IAM OIDS provider or connector as ALB controller has to access application LB. ALB controller is K8S pod but it needs to talk to AWS resources for which it needs to have IAM integrated. So we need to create IAM OIDC provider.
+- Now create ingress controller which will read ingress resource called "ingress-2048" which will create Load balancer for us with all configurations
+- Creating LB like ALB will be of no use
+- So configurations like target groups, ports, etc are created by ingress resource. All is taken care by ingress controller all we need is ingress resource.
+- To deploy ALB controller, we've to create IAM OIDS provider or connector as ALB controller has to access application LB. ALB controller is K8S pod but it needs to talk to AWS resources for which it needs to have IAM integrated. So we need to create IAM OIDC provider.
+- This is done in every organization
+- In cluster - Authentication there will be OIDC provider as well
 
-Command :-   _**eksctl utils associate-iam-oidc-provider --cluster demo-cluster --region us-east-1 --approve**_
+![image](https://github.com/user-attachments/assets/e7039295-5197-47e0-9959-c3c1451d39d6)
+
+  - Command :-   _**eksctl utils associate-iam-oidc-provider --cluster demo-cluster --region us-east-1 --approve**_
 
 ![image](https://github.com/Shubham0315/AWS_EKS/assets/105341138/c1c20d12-5a06-4892-93e9-10c17efd0132)
 
-- Now we're trying to install ALB controller which is a pod for which we've to grant it access to services like ALB. This is because ALB ingress controller should create ALB for us for which it has to talk to AWS APIs. So here create IAM role for that.
+- Now we're trying to install ALB controller which is a pod for which we've to grant it access to services like ALB (role). This is because ALB ingress controller should create ALB for us for which it has to talk to AWS APIs. So here create IAM role for that.
 
 Command :-  _**curl -O https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/v2.5.4/docs/install/iam_policy.json**_
 
@@ -161,19 +175,23 @@ Command :- _**aws iam create-policy --policy-name AWSLoadBalancerControllerIAMPo
 ![image](https://github.com/Shubham0315/AWS_EKS/assets/105341138/8d9acb4a-295e-4d15-b71e-c9bb693e1bc6)
 
 - Then to create role use below
+  - When pod is running it will have service account. For the svc account we need role attached to it so that we can integrate with other AWS resources
+  - Here IAM service account is getting created and it is also getting attached with role. So we use this account in our application.
 
-Command :- _**eksctl create iamserviceaccount --cluster=demo-cluster --region us-east-1 --namespace=kube-system --name=aws-load-balancer-controller --role-name AmazonEKSLoadBalancerControllerRole --attach-policy-arn=arn:aws:iam::975049937461:policy/AWSLoadBalancerControllerIAMPolicy --approve**_
+  - Command :- _**eksctl create iamserviceaccount --cluster=demo-cluster --region us-east-1 --namespace=kube-system --name=aws-load-balancer-controller --role-name AmazonEKSLoadBalancerControllerRole --attach-policy-arn=arn:aws:iam::975049937461:policy/AWSLoadBalancerControllerIAMPolicy --approve**_
 
 ![image](https://github.com/Shubham0315/AWS_EKS/assets/105341138/2e91f43e-8c15-4358-acda-c4eca770060a)
 
 - Using above command we are attaching role to service account of our pod. Whenever pod is running, it has service account and service account needs role attached to integrate it with other AWS resources. We can use same service account in our application
 
-- Now to create ALB controller for which we will use helm charts which creates actual controller and it will use service account for running pod.
+-----------------------------------------------------------------------------------------------------------------
+
+- Now to create ALB controller for which we will use helm charts which creates actual controller and it will use the created service account for running pod.
 
 - Now install the helm chart
 
-  Command1 :- helm repo add eks https://aws.github.io/eks-charts  ( to add eks to our repositories)
-  Command2 :- helm repo update eks  ( to check for updates)
+  - Command1 :- **helm repo add eks https://aws.github.io/eks-charts**  ( to add eks to our repositories)
+  - Command2 :- **helm repo update eks**  ( to check for updates)
 
   ![image](https://github.com/Shubham0315/AWS_EKS/assets/105341138/6169eade-6a16-477c-8bd1-d147005bf870)
 
