@@ -30,25 +30,29 @@ EKS = Control Plane, Fargate = Data Plane
  # How to Deploy application on AWS EKS Cluster and allow users to access it?
 
 - Lets say we have 3 master nodes (M1,M2,M3) and 2 worker nodes (W1, W2)
-- Suppose, our app is deployed onto pod on one of the worker node (we've created pod.yml and deployed it).
+- Suppose, our app is deployed onto pod creating pod.yml on one of the worker node W2 (we've created pod.yml and deployed it).
 - Now this app inside pod will have cluster IP. So this pod can be accessed from anywhere in cluster (M1,M2,M3,W1) but end user cannot access it.
-- So now first we'll create service for pod (create service.yml and deploy the service). Service has 3 options cluster IP, Node port, LB
-  LB creates Elastic IP address using which users can access but it is very costly.
+- So now first we'll create service for pod (create service.yml and deploy the service). Service has 3 options cluster IP(already using), Node port, LB mode exposing to public
+  - Using cluster IP, the pod will be accessible only within from cluster
+  - In node port, if we convert service to node-port model, the pod can be accessed from any of the IP addresses of EC2 instances. But K8S Cluster will be within VPC which will have public subnet and private subnet. Apps are always deployed in private subnet. So in nodeport mode apps will be accessible to people having access to private subnet only.
+  - For outside people to access it, we need LB. LB creates Elastic IP address using which users can access but it is very costly.
+  
 - Here best option apart from 3 modes is go with **_*"Ingress Resource"*_**
-- Lets have master node and worker node. In master we've API server. On worker we have pod inside which app is deployed and also service is deployed there. The service we'll restrict to cluster IP or Node Port mode both supported by ingress.
+- Lets have master node and worker node. In master we've API server. There will be a pod on worker node. Also service will be there on worker which will be cluster IP or nodeport. On worker we have pod inside which app is deployed and also service is deployed there. The service we'll restrict to cluster IP or Node Port mode both supported by ingress. 
 - On worker we'll create ingress resource which will allow user to access app inside EKS cluster (Ingress routes traffic inside EKS cluster)
 
-- Devops engineer will write _**"ingress.yml"**_ file where they define allow user to access app , forward the request to service from where request goes to pod. This configuration is written in ingress resource. We'll deploy ingress resource using kubectl.
+- Devops engineer will write _**"ingress.yml"**_ file where they define allow user to access app ON specific website , forward the request to service from where request goes to pod. This configuration is written in ingress resource. We'll deploy ingress resource using kubectl.
+- Now ingress is deployed.
   
-- But there has to be someone who must take user from outside to worker node as everything inside nodes will be in private subnet.
-- So there is _**"Ingress Controller"**_. Request from user can be taken to public subnet inside nodes but there has to be LB which takes request to private subnet and access the app. Typically all LB support Ingress Controllers.
-- As soon as we create ingress resource, ingress controller will watch for it and it creates ALB (Application Load Balancer) for us which watches ingress resources and whenever ingress resource is created, ALB controller creates ALB env for us using which user can talk to app LB from where request will go to our app.
+- But there has to be someone who must take user request from outside to worker node as user cannot access anything inside worker as everything inside nodes will be in private subnet. But here user can access things in public subnet. If we place LB in public subnet, user request goes to LB and then it will go inside pod.
+- So there is _**"Ingress Controller"**_ which is supported by all LBs. Request from user can be taken to public subnet inside nodes but there has to be LB which takes request to private subnet and access the app. Typically all LB support Ingress Controllers.
+- As soon as we create ingress resource, ingress controller will watch for it and it creates ALB (Application Load Balancer) controller for us which watches ingress resources and whenever ingress resource is created, ALB controller creates ALB env for us using which user can talk to app LB from where request will go to our app.
 
 _**e.g:- If we're using nginx app. There will be nginx ingress controller which we deploy in K8S cluster and whenever nginx ingress controller finds ingress resource, nginx controller will either create nginx LB or if LB is already there it will configure the LB for the rules mentioned in ingress resource.**_
 
-- We can define in **ingress.yml** that who should access ingress resource (IAM roles).
+- In **ingress.yml** we can define, who should access ingress resource (IAM roles).
 
-- DevOps engineer along with pod and service will create ingress for every resource or pod which need access from external world. There will be one ingress controller which will watch for all ingress resources and it will configure LB. External person will talk to LB and from LB which is in public subnet request will go service through pod.
+- DevOps engineer along with pod and service will create ingress for every resource or pod which need access from external world. There will be one ingress controller which will watch for all ingress resources and it will configure LB. External person will talk to LB and from LB which is in public subnet request will go through service to the pod.
 
 ---------------------------------------------------------------------------------------------------------------------------------------------
 
