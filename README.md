@@ -1,6 +1,6 @@
 # AWS_EKS (Elastic Kubernetes Service)
 
-- EKS is managed K8S offering.
+- EKS is AWS managed K8S offering.
 - As we know K8S cluster has 2 components Control plane and data plane (single or multiple). For High availability of clusters, its suggested to create 3 worker and 3 master node architecture (6 EC2 instances)
   
 - After creation of 6 instances, we've to install configurations on master nodes like API server, etcd, scheduler, CCM, CM (control plane components) which are user facing components. Users will be talking to these components for any request from where request goes to data plane. After that, as a devops engineer we've to install and configure data plane components after which we've to join worker nodes to control plane.
