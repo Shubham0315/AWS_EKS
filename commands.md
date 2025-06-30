@@ -42,7 +42,7 @@ Deployment Steps
 - Command1 :- **helm repo add eks https://aws.github.io/eks-charts**  ( to add eks to our repositories)
 - Command2 :- **helm repo update eks**  ( to check for updates)
 
-8. To install AWS ALB using helm charts
+8. To install AWS ALB controller using helm charts
 - Command :- **helm install aws-load-balancer-controller eks/aws-load-balancer-controller -n kube-system \
   --set clusterName=demo-cluster \
   --set serviceAccount.create=false \
