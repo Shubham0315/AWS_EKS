@@ -8,7 +8,7 @@ Three Tier Architecture Model
 
 3 Tier Application Overview
 - 
-- For any application there are 2 types of flows, user flow and admin flow
+- For any application there are 2 types of flows, user flow and admin flow.
 - Lets say we're developing robot app for now
 
 - User Flow
